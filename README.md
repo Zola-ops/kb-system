@@ -69,13 +69,23 @@ scripts/kb ingest --write "内容"   # 摄入对话并写入 Obsidian
 
 ## 与 Obsidian 的关系
 
-**kb-system 不依赖 Obsidian。** 它读取的是任意 Markdown 文件夹——默认路径恰好是 Obsidian Vault 位置。
+**kb-system 不依赖 Obsidian，但对 Obsidian 用户开箱即用。**
+
+启动时自动扫描你的 Vault：
+- 📂 发现所有 `.md` 文件
+- 🏷️ 解析 frontmatter（YAML 元数据）
+- 🔗 提取 `[[wikilink]]` 双向链接
+- #️⃣ 提取 `#标签`
+- 🧠 生成语义向量索引
+- 🕸️ 构建知识图谱
+
+**零配置：** 指向任意 Markdown 文件夹，以上全部自动完成。
 
 | Obsidian 用户 | 非 Obsidian 用户 |
 |---|---|
-| 开箱即用，自动识别 `[[]]` wikilink、frontmatter、Daily 日记 | 设置 `NOTES_ROOT=/your/md/folder` 即可，wikilink 和 frontmatter 是通用 Markdown 语法 |
+| 默认路径 `~/Documents/Obsidian Vault`，启动即用 | 设 `NOTES_ROOT=/your/folder`，同样支持 |
 
-Obsidian 本质上只是 Markdown 编辑器——kb-system 关心的是 `.md` 文件里的内容，不是 Obsidian 插件。你甚至可以同时用 Obsidian 编辑、用 kb-system 管理。
+如果你用 Obsidian 编辑、用 kb-system 管理搜索和图谱——两者互补，互不干扰。
 
 ## 测试
 

@@ -1,13 +1,31 @@
 """kb-system Web API — FastAPI 后端"""
 from pathlib import Path
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from .pipeline import KnowledgePipeline
 from .config import NOTES_ROOT
 
-app = FastAPI(title="知识库", version="0.1.0")
 pipeline = KnowledgePipeline()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """启动时自动索引已有笔记"""
+    pipeline.db.init()
+    notes = pipeline.reader.discover()
+    pipeline.db.sync_from_vault(notes)
+    n = len(notes)
+    if n > 0 and pipeline.db.embedding_count() == 0:
+        print(f"发现 {n} 篇已有笔记，正在生成索引…")
+        r = pipeline.index_embeddings()
+        pipeline.build_graph()
+        print(f"✅ 已索引 {r['total']} 篇，{r['dim']}维向量")
+    yield
+
+
+app = FastAPI(title="知识库", version="0.2.0", lifespan=lifespan)
 _pipeline = pipeline  # 别名
 
 
@@ -65,6 +83,17 @@ def api_note(title: str):
         "wikilinks": json.loads(row["wikilinks_json"]),
         "tags": json.loads(row["tags_json"]),
     }
+
+
+@app.post("/api/index")
+def api_index():
+    """重建索引（新增笔记后调用）"""
+    notes = _pipeline.reader.discover()
+    _pipeline.db.init()
+    _pipeline.db.sync_from_vault(notes)
+    r = _pipeline.index_embeddings()
+    g = _pipeline.build_graph()
+    return {**r, "graph_edges": g["total_edges"]}
 
 
 # 静态文件
