@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import datetime
-from .config import VAULT_ROOT
+from .config import NOTES_ROOT
 
 
 @dataclass
@@ -24,7 +24,7 @@ class VaultReader:
     """Obsidian Vault 读取器"""
 
     def __init__(self, vault_root: Path | None = None):
-        self.vault_root = vault_root or VAULT_ROOT
+        self.vault_root = vault_root or NOTES_ROOT
 
     def discover(self) -> list[NoteDocument]:
         """扫描 Vault 中所有 markdown 文件"""

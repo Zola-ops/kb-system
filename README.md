@@ -66,7 +66,16 @@ scripts/kb ingest --write "内容"   # 摄入对话并写入 Obsidian
 - Python 3.11+
 - LLM API (任何 OpenAI 兼容接口，如 DeepSeek/OpenAI/OneAPI)
 - sentence-transformers (首次启动自动下载多语言嵌入模型 ~118MB)
-- Obsidian (可选，摄入功能需要 Vault 路径)
+
+## 与 Obsidian 的关系
+
+**kb-system 不依赖 Obsidian。** 它读取的是任意 Markdown 文件夹——默认路径恰好是 Obsidian Vault 位置。
+
+| Obsidian 用户 | 非 Obsidian 用户 |
+|---|---|
+| 开箱即用，自动识别 `[[]]` wikilink、frontmatter、Daily 日记 | 设置 `NOTES_ROOT=/your/md/folder` 即可，wikilink 和 frontmatter 是通用 Markdown 语法 |
+
+Obsidian 本质上只是 Markdown 编辑器——kb-system 关心的是 `.md` 文件里的内容，不是 Obsidian 插件。你甚至可以同时用 Obsidian 编辑、用 kb-system 管理。
 
 ## 测试
 

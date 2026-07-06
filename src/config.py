@@ -9,8 +9,12 @@ try:
 except ImportError:
     pass
 
-# Obsidian Vault 路径
-VAULT_ROOT = Path(os.path.expanduser("~/Documents/Obsidian Vault"))
+# 笔记根目录（默认 Obsidian Vault，可指向任意 Markdown 文件夹）
+NOTES_ROOT = Path(os.getenv("NOTES_ROOT", os.path.expanduser("~/Documents/Obsidian Vault")))
+
+# Obsidian 特有功能（wikilink [[解析]]、Daily 日记自动更新）
+# 如果使用普通 Markdown 文件夹，这些功能仍然可用（wikilink 是通用语法）
+OBSIDIAN_MODE = os.getenv("OBSIDIAN_MODE", "true").lower() == "true"
 
 # 知识库系统数据目录
 DATA_DIR = Path(__file__).parent.parent / "data"

@@ -5,15 +5,15 @@ from .vault_writer import VaultWriter
 from .database import KnowledgeDB
 from .ingest import ConversationIngestor
 from .embeddings import EmbeddingEngine
-from .config import VAULT_ROOT, DB_PATH
+from .config import NOTES_ROOT, DB_PATH
 
 
 class KnowledgePipeline:
     """端到端知识摄入管线"""
 
     def __init__(self, dry_run: bool = False):
-        self.reader = VaultReader(VAULT_ROOT)
-        self.writer = VaultWriter(VAULT_ROOT)
+        self.reader = VaultReader(NOTES_ROOT)
+        self.writer = VaultWriter(NOTES_ROOT)
         self.db = KnowledgeDB(DB_PATH)
         self.ingestor = ConversationIngestor()
         self.embedder: EmbeddingEngine | None = None
@@ -69,7 +69,7 @@ class KnowledgePipeline:
         # 4. 更新 Daily 日记
         self.writer.update_daily(
             note_title=title,
-            note_path=str(filepath.relative_to(VAULT_ROOT)),
+            note_path=str(filepath.relative_to(NOTES_ROOT)),
             summary=classification.get("summary", ""),
         )
 

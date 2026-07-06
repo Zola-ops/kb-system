@@ -4,7 +4,7 @@ from fastapi import FastAPI, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from .pipeline import KnowledgePipeline
-from .config import VAULT_ROOT
+from .config import NOTES_ROOT
 
 app = FastAPI(title="知识库", version="0.1.0")
 pipeline = KnowledgePipeline()
