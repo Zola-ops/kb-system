@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识库</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+  .card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.2s; cursor: pointer; }
+  .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+  input, textarea { background: #f5f5f7; border: 1.5px solid #e5e5ea; border-radius: 10px; color: #1d1d1f; padding: 12px 16px; width: 100%; outline: none; transition: border-color 0.2s; font-size: 14px; }
+  input:focus, textarea:focus { border-color: #0071e3; background: #fff; }
+  .tab { padding: 8px 18px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 13px; color: #86868b; }
+  .tab.active { background: #0071e3; color: #fff; }
+  .tab:hover:not(.active) { background: #e8e8ed; color: #1d1d1f; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+  .badge-Reports { background: #d1fae5; color: #065f46; }
+  .badge-Projects { background: #dbeafe; color: #1e40af; }
+  .badge-Learnings { background: #fef3c7; color: #92400e; }
+  .badge-Fixes { background: #fee2e2; color: #991b1b; }
+  .badge-Daily { background: #ede9fe; color: #5b21b6; }
+  .btn { padding: 8px 18px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.2s; border: none; }
+  .btn-primary { background: #0071e3; color: #fff; }
+  .btn-primary:hover { background: #0077ed; }
+  .btn-secondary { background: #e8e8ed; color: #1d1d1f; }
+  .btn-secondary:hover { background: #dcdce0; }
+  .btn-success { background: #34c759; color: #fff; }
+  .btn-success:hover { background: #30d158; }
+  .tag { display: inline-block; padding: 2px 8px; background: #f0f0f5; border-radius: 5px; font-size: 11px; margin: 2px; color: #636366; }
+  .skeleton { background: linear-gradient(90deg, #e8e8ed 25%, #f0f0f5 50%, #e8e8ed 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; height: 80px; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .spinner { width: 20px; height: 20px; border: 2px solid #e5e5ea; border-top-color: #0071e3; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  svg text { fill: #636366; font-size: 11px; }
+  svg line { stroke: #e5e5ea; }
+  .detail-panel { position: fixed; top: 0; right: 0; width: 420px; max-width: 90vw; height: 100vh; background: #fff; box-shadow: -4px 0 20px rgba(0,0,0,0.08); z-index: 100; overflow-y: auto; padding: 24px; transform: translateX(100%); transition: transform 0.3s ease; }
+  .detail-panel.open { transform: translateX(0); }
+  .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 99; display: none; }
+  .backdrop.show { display: block; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 3px; }
+</style>
+</head>
+<body class="flex flex-col items-center p-4 md:p-8">
+
+<!-- Backdrop -->
+<div id="backdrop" class="backdrop" onclick="closeDetail()"></div>
+<!-- Detail Panel -->
+<div id="detail-panel" class="detail-panel"></div>
+
+<!-- Header -->
+<div class="w-full max-w-4xl mb-6 flex items-center justify-between">
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+      <span class="text-3xl">📚</span> 知识库
+    </h1>
+    <p class="text-sm text-gray-400 mt-1" id="header-sub">加载中…</p>
+  </div>
+  <span class="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full" id="header-badge"></span>
+</div>
+
+<!-- Tabs -->
+<div class="w-full max-w-4xl flex gap-2 mb-6" id="tabs">
+  <div class="tab active" onclick="switchTab('search')">🔍 搜索</div>
+  <div class="tab" onclick="switchTab('browse')">📋 浏览</div>
+  <div class="tab" onclick="switchTab('graph')">🕸️ 图谱</div>
+  <div class="tab" onclick="switchTab('ingest')">📝 摄入</div>
+</div>
+
+<!-- Search Tab -->
+<div id="tab-search" class="w-full max-w-4xl">
+  <div class="flex gap-3 mb-6">
+    <input id="search-input" placeholder="搜索你的知识库…（支持自然语言）" onkeydown="if(event.key==='Enter')doSearch()" autofocus>
+    <button class="btn btn-primary" onclick="doSearch()" id="search-btn">搜索</button>
+  </div>
+  <div class="flex gap-2 mb-4">
+    <button onclick="setMode('semantic')" id="btn-semantic" class="btn btn-primary" style="font-size:12px;padding:4px 12px">语义</button>
+    <button onclick="setMode('keyword')" id="btn-keyword" class="btn btn-secondary" style="font-size:12px;padding:4px 12px">关键词</button>
+  </div>
+  <div id="search-loading" class="hidden text-center py-8">
+    <div class="spinner mb-2"></div>
+    <p class="text-sm text-gray-400">首次加载嵌入模型约需 5 秒…</p>
+  </div>
+  <div id="search-results"></div>
+</div>
+
+<!-- Browse Tab -->
+<div id="tab-browse" class="w-full max-w-4xl hidden">
+  <div id="browse-loading" class="text-center py-8"><div class="spinner mb-2"></div><p class="text-sm text-gray-400">加载中…</p></div>
+  <div id="browse-results" class="hidden"></div>
+</div>
+
+<!-- Graph Tab -->
+<div id="tab-graph" class="w-full max-w-4xl hidden">
+  <div class="card mb-4" style="cursor:default">
+    <input id="graph-query" placeholder="输入笔记名查看关联…" onkeydown="if(event.key==='Enter')loadGraph()">
+  </div>
+  <div id="graph-svg" class="card" style="min-height:400px; cursor:default"></div>
+  <div id="graph-legend" class="mt-3 text-xs text-gray-400"></div>
+</div>
+
+<!-- Ingest Tab -->
+<div id="tab-ingest" class="w-full max-w-4xl hidden">
+  <textarea id="ingest-input" rows="8" placeholder="粘贴对话内容…" class="mb-4 resize-none"></textarea>
+  <div class="flex gap-3 mb-4">
+    <button onclick="doIngest(false)" class="btn btn-primary">预览</button>
+    <button onclick="doIngest(true)" class="btn btn-success">写入 Obsidian</button>
+  </div>
+  <div id="ingest-result"></div>
+</div>
+
+<script>
+let searchMode = 'semantic';
+let allNotes = [];
+
+// Init
+fetch('/api/stats').then(r=>r.json()).then(d => {
+  document.getElementById('header-sub').textContent = `${d.db_stats.total_notes} 篇笔记 · ${d.db_stats.total_relations||0} 条关联`;
+});
+
+function switchTab(t) {
+  document.querySelectorAll('#tabs .tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+  document.getElementById('tab-'+t).classList.remove('hidden');
+  event.target.classList.add('active');
+  if (t==='browse' && !allNotes.length) loadBrowse();
+  if (t==='graph') loadGraphOverview();
+}
+
+function setMode(m) {
+  searchMode = m;
+  document.getElementById('btn-semantic').className = m==='semantic' ? 'btn btn-primary' : 'btn btn-secondary';
+  document.getElementById('btn-semantic').style.cssText = 'font-size:12px;padding:4px 12px';
+  document.getElementById('btn-keyword').className = m==='keyword' ? 'btn btn-primary' : 'btn btn-secondary';
+  document.getElementById('btn-keyword').style.cssText = 'font-size:12px;padding:4px 12px';
+}
+
+// ── Search ──
+async function doSearch() {
+  const q = document.getElementById('search-input').value;
+  if (!q) return;
+  const load = document.getElementById('search-loading');
+  const res = document.getElementById('search-results');
+  load.classList.remove('hidden'); res.innerHTML = '';
+  const t0 = Date.now();
+  try {
+    const data = await fetch(`/api/search?q=${encodeURIComponent(q)}&mode=${searchMode}&limit=12`).then(r=>r.json());
+    load.classList.add('hidden');
+    const took = Date.now() - t0;
+    if (!data.results.length) { res.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">无结果</p>'; return; }
+    res.innerHTML = data.results.map((h,i) => `
+      <div class="card mb-3" onclick="openDetail('${h.title.replace(/'/g,"\\'")}')">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-semibold">${h.title}</span>
+          <span class="badge badge-${h.category}">${h.category}</span>
+        </div>
+        <p class="text-xs text-gray-500 line-clamp-2">${(h.snippet||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').substring(0,150)}</p>
+        <div class="flex items-center gap-2 mt-2">
+          ${h.score ? `<span class="text-xs text-blue-500">相似度 ${h.score}</span>` : ''}
+          <span class="text-xs text-gray-400">${took}ms</span>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { load.classList.add('hidden'); res.innerHTML = '<p class="text-sm text-red-500 text-center py-8">搜索失败</p>'; }
+}
+
+// ── Browse ──
+async function loadBrowse() {
+  const load = document.getElementById('browse-loading');
+  const res = document.getElementById('browse-results');
+  load.classList.remove('hidden'); res.classList.add('hidden');
+  const notes = await fetch('/api/notes').then(r=>r.json());
+  allNotes = notes;
+  // Exclude system notes, sort by path for grouping
+  const filtered = notes.filter(n => !['Secrets','Memory','HeartBeat','Tools','Skills','EntroCamp学习笔记'].includes(n.category) && n.category);
+  const byCat = {};
+  filtered.forEach(n => { (byCat[n.category]||=[]).push(n); });
+  load.classList.add('hidden'); res.classList.remove('hidden');
+  let html = '';
+  for (const [cat, items] of Object.entries(byCat)) {
+    html += `<h3 class="text-sm font-semibold text-gray-500 mb-3 mt-6">${cat} · ${items.length} 篇</h3>`;
+    items.forEach(n => {
+      html += `<div class="card mb-3" onclick="openDetail('${n.title.replace(/'/g,"\\'")}')">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium">${n.title}</span>
+          <span class="badge badge-${n.category}">${n.category}</span>
+        </div>
+        ${n.tags.length ? `<div class="mt-2">${n.tags.map(t=>`<span class="tag">#${t}</span>`).join('')}</div>` : ''}
+      </div>`;
+    });
+  }
+  res.innerHTML = html;
+}
+
+// ── Detail Panel ──
+async function openDetail(title) {
+  const panel = document.getElementById('detail-panel');
+  const backdrop = document.getElementById('backdrop');
+  panel.innerHTML = '<div class="text-center py-12"><div class="spinner mb-2"></div><p class="text-xs text-gray-400">加载中…</p></div>';
+  backdrop.classList.add('show'); panel.classList.add('open');
+
+  let note = {}, g = {edges:[]};
+  const enc = encodeURIComponent(title);
+
+  try {
+    const r = await fetch('/api/note/'+enc);
+    if (r.ok) note = await r.json();
+  } catch(e) { console.error('note fetch failed', e); }
+
+  try {
+    const r = await fetch('/api/graph?title='+enc);
+    if (r.ok) g = await r.json();
+  } catch(e) { console.error('graph fetch failed', e); }
+
+  const content = (note.content||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  panel.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold">${title}</h2>
+      <button onclick="closeDetail()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+    </div>
+    <span class="badge badge-${note.category||''} mb-3">${note.category||'?'}</span>
+    ${(note.tags||[]).length ? `<div class="mb-3">${(note.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('')}</div>` : ''}
+    ${note.path ? `<p class="text-xs text-gray-400 mb-4 break-all">${note.path}</p>` : ''}
+    ${content ? `<div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed mb-6 max-h-96 overflow-y-auto bg-gray-50 p-4 rounded-xl">${content.substring(0,3000)}</div>` : '<p class="text-sm text-gray-400 mb-6">无内容</p>'}
+    <h3 class="text-sm font-semibold text-gray-500 mt-4 mb-3">关联笔记</h3>
+    ${g.edges && g.edges.length ? g.edges.slice(0,10).map(e => `
+      <div class="card mb-2" onclick="closeDetail();switchTab('graph');document.getElementById('graph-query').value='${e.neighbor.replace(/'/g,"\\'")}';loadGraph()" style="padding:10px 14px">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium">${e.neighbor}</span>
+          <span class="text-xs text-gray-400">${e.relation_type} · ${e.confidence}</span>
+        </div>
+      </div>
+    `).join('') : '<p class="text-sm text-gray-400">暂无关联</p>'}
+  `;
+}
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('show');
+}
+
+// ── Graph ──
+async function loadGraphOverview() {
+  const gs = await fetch('/api/graph').then(r=>r.json());
+  const top = gs.most_connected[0];
+  if (top) {
+    document.getElementById('graph-query').value = top.title;
+    loadGraph();
+  }
+}
+
+async function loadGraph() {
+  const q = document.getElementById('graph-query').value;
+  if (!q) return loadGraphOverview();
+  const el = document.getElementById('graph-svg');
+  el.innerHTML = '<div class="text-center py-8"><div class="spinner mb-2"></div></div>';
+  const g = await fetch('/api/graph?title='+encodeURIComponent(q)).then(r=>r.json());
+  if (g.error) { el.innerHTML = `<p class="p-6 text-sm text-gray-400">${g.error}</p>`; return; }
+  const W = el.clientWidth||700, H = 440, cx = W/2, cy = H/2, R = Math.min(W,H)/2-50;
+  const nodes = [{id:g.center.title,cat:g.center.category,x:cx,y:cy,fx:cx,fy:cy}];
+  const links = [];
+  g.edges.forEach((e,i) => {
+    const a = (2*Math.PI*i)/g.edges.length;
+    nodes.push({id:e.neighbor,cat:e.neighbor_cat,x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)});
+    links.push({source:g.center.title,target:e.neighbor,type:e.relation_type,conf:e.confidence});
+  });
+  el.innerHTML = '';
+  const svg = d3.select('#graph-svg').append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('width','100%').attr('height',H);
+  const sim = d3.forceSimulation(nodes).force('link',d3.forceLink(links).id(d=>d.id).distance(100)).force('charge',d3.forceManyBody().strength(-180)).force('center',d3.forceCenter(cx,cy));
+  svg.append('g').selectAll('line').data(links).join('line').attr('stroke',d=>d.type==='wikilink'?'#0071e3':d.type==='semantic'?'#34c759':'#f59e0b').attr('stroke-width',d=>1+d.confidence*2).attr('stroke-opacity',0.5);
+  const node = svg.append('g').selectAll('g').data(nodes).join('g').call(d3.drag().on('start',(e,d)=>{d.fx=d.x;d.fy=d.y;sim.alphaTarget(0.3).restart()}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y}).on('end',(e,d)=>{sim.alphaTarget(0)}));
+  node.append('circle').attr('r',d=>d.id===g.center.title?9:5).attr('fill',d=>d.id===g.center.title?'#0071e3':'#d1d1d6').attr('stroke','#fff').attr('stroke-width',2);
+  node.append('text').text(d=>d.id.length>8?d.id.slice(0,8)+'…':d.id).attr('x',11).attr('y',3).attr('font-size','10px');
+  node.on('click',(e,d)=>{if(d.id!==g.center.title){document.getElementById('graph-query').value=d.id;loadGraph()}});
+  sim.on('tick',()=>{svg.selectAll('line').attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('transform',d=>`translate(${d.x},${d.y})`)});
+  document.getElementById('graph-legend').innerHTML = '<span style="color:#0071e3">━</span> wikilink &nbsp; <span style="color:#34c759">━</span> 语义 &nbsp; <span style="color:#0071e3">●</span> 中心 &nbsp; 拖拽移动 · 点击展开';
+}
+
+// ── Ingest ──
+async function doIngest(write) {
+  const c = document.getElementById('ingest-input').value;
+  if (!c) return;
+  const el = document.getElementById('ingest-result');
+  el.innerHTML = '<div class="text-center py-4"><div class="spinner mb-2"></div><p class="text-xs text-gray-400">LLM 处理中…</p></div>';
+  const r = await fetch('/api/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:c,write})}).then(r=>r.json());
+  if (r.action==='skip') el.innerHTML = `<div class="card"><p class="text-sm text-gray-500">⏭️ 跳过: ${r.reason||''}</p></div>`;
+  else if (r.action==='dry_run') el.innerHTML = `<div class="card">
+    <p class="text-sm text-blue-500 mb-2 font-semibold">📝 预览 — [${r.category}] ${r.title}</p>
+    <p class="text-xs text-gray-500 mb-3">${r.summary||''}</p>
+    <pre class="text-xs text-gray-600 whitespace-pre-wrap max-h-60 overflow-auto bg-gray-50 p-3 rounded-lg">${(r.note_content||'').substring(0,800)}</pre>
+  </div>`;
+  else el.innerHTML = `<div class="card">
+    <p class="text-sm text-green-500 font-semibold">✅ 已写入 — [${r.category}] ${r.title}</p>
+    <p class="text-xs text-gray-500 mt-1">${r.path||''}</p>
+  </div>`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# 敏感数据
+.env
+data/kb_index.db
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+.pytest_cache/
+
+# macOS
+.DS_Store

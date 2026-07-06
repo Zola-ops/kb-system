@@ -1,0 +1,113 @@
+#!/bin/bash
+# kb — 个人知识库命令行工具
+# 用法: kb search <词> [--semantic] | kb stats | kb ingest <内容> | kb index
+set -e
+PROJECT_DIR="$HOME/Desktop/kb-system"
+VENV="$HOME/.hermes/hermes-agent/venv/bin/python"
+export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
+cd "$PROJECT_DIR"
+
+case "${1:-}" in
+  search)
+    MODE="keyword"
+    ARGS=()
+    for arg in "$@"; do
+      if [ "$arg" = "--semantic" ] || [ "$arg" = "-s" ]; then
+        MODE="semantic"
+      elif [ "$arg" != "search" ]; then
+        ARGS+=("$arg")
+      fi
+    done
+    QUERY="${ARGS[*]}"
+    $VENV -c "
+from src.pipeline import KnowledgePipeline
+p = KnowledgePipeline()
+r = p.search('$QUERY', limit=8, mode='$MODE')
+print(f'\n🔍 「$QUERY」({r[\"mode\"]}) — {r[\"total_hits\"]} 条\n')
+for i, h in enumerate(r['results'], 1):
+    s = h.get('snippet','')[:100].replace(chr(10),' ')
+    score = f' ({h[\"score\"]})' if 'score' in h else ''
+    print(f'  {i}. [{h[\"category\"]}] {h[\"title\"]}{score}')
+    if s: print(f'     {s}...')
+    print()
+"
+    ;;
+  stats)
+    $VENV -c "
+from src.database import KnowledgeDB
+from src.config import DB_PATH
+db = KnowledgeDB(DB_PATH); db.init()
+s = db.get_stats()
+ec = db.embedding_count()
+db.close()
+print(f'\n📊 {s[\"total_notes\"]} 篇 | 向量索引: {ec}/{s[\"total_notes\"]}\n')
+for c in s['by_category']:
+    bar = '█' * min(c['count'], 30)
+    print(f'  {c[\"category\"]:22s} {bar} {c[\"count\"]}')
+"
+    ;;
+  index)
+    echo "生成向量索引..."
+    $VENV -c "
+from src.pipeline import KnowledgePipeline
+p = KnowledgePipeline()
+r = p.index_embeddings()
+print(f'✅ {r[\"total\"]} 篇已索引 ({r.get(\"dim\",\"?\")}维)')
+"
+    ;;
+  ingest)
+    WRITE="False"
+    ARGS=()
+    for arg in "$@"; do
+      if [ "$arg" = "--write" ]; then WRITE="True"
+      elif [ "$arg" != "ingest" ]; then ARGS+=("$arg"); fi
+    done
+    CONTENT="${ARGS[*]}"
+    $VENV -c "
+from src.pipeline import KnowledgePipeline
+p = KnowledgePipeline(dry_run=$WRITE)
+r = p.ingest('''$CONTENT''')
+a = r['action']
+if a == 'skip': print(f'⏭️ {r.get(\"reason\",\"\")}')
+elif a == 'dry_run': print(f'📝 [{r[\"category\"]}] {r[\"title\"]}\n   {r[\"summary\"]}')
+else: print(f'✅ [{r[\"category\"]}] {r[\"title\"]}\n   {r[\"path\"]}')
+"
+    ;;
+  graph)
+    TITLE="${2:-}"
+    if [ -z "$TITLE" ]; then
+      $VENV -c "
+from src.pipeline import KnowledgePipeline
+p = KnowledgePipeline()
+gs = p.graph_stats()
+print(f'\n📈 图谱: {gs[\"total_notes\"]} 节点, {gs[\"total_relations\"]} 边\\n')
+print('最连接笔记:')
+for n in gs['most_connected'][:8]:
+    print(f'  [{n[\"category\"]:12s}] {n[\"title\"]:25s} {n[\"degree\"]}条')
+"
+    else
+      $VENV -c "
+from src.pipeline import KnowledgePipeline
+p = KnowledgePipeline()
+g = p.query_graph('$TITLE')
+if 'error' in g:
+    print(g['error'])
+else:
+    print(f'\n📊 {g[\"center\"][\"title\"]} — {g[\"total_relations\"]} 条关联\\n')
+    for e in g['edges'][:15]:
+        print(f'  [{e[\"relation_type\"]:12s}] {e[\"neighbor\"]:30s} ({e[\"confidence\"]})')
+"
+    fi
+    ;;
+  *)
+    echo "kb — 个人知识库"
+    echo "  kb search <词>           关键词搜索"
+    echo "  kb search -s <描述>       语义搜索"
+    echo "  kb stats                  知识库统计"
+    echo "  kb index                  重建向量索引"
+    echo "  kb graph                  图谱统计"
+    echo "  kb graph <笔记名>         查看笔记关联"
+    echo "  kb ingest <内容>          干跑预览"
+    echo "  kb ingest --write <内容>  写入 Obsidian"
+    ;;
+esac
