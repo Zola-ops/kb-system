@@ -1,9 +1,21 @@
 #!/bin/bash
-# kb — 个人知识库命令行工具
-# 用法: kb search <词> [--semantic] | kb stats | kb ingest <内容> | kb index
+# kb — 个人知识库 CLI（独立于任何 Agent 工具）
 set -e
-PROJECT_DIR="$HOME/Desktop/kb-system"
-VENV="$HOME/.hermes/hermes-agent/venv/bin/python"
+# 自动检测项目目录（脚本所在位置的上级目录）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# 自动检测 Python（优先级：venv > 系统 python3 > python）
+if [ -f "$PROJECT_DIR/.venv/bin/python" ]; then
+  PYTHON="$PROJECT_DIR/.venv/bin/python"
+elif [ -f "$PROJECT_DIR/venv/bin/python" ]; then
+  PYTHON="$PROJECT_DIR/venv/bin/python"
+elif command -v python3 &>/dev/null; then
+  PYTHON="python3"
+else
+  PYTHON="python"
+fi
+
 export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
 cd "$PROJECT_DIR"
 
@@ -19,7 +31,7 @@ case "${1:-}" in
       fi
     done
     QUERY="${ARGS[*]}"
-    $VENV -c "
+    $PYTHON -c "
 from src.pipeline import KnowledgePipeline
 p = KnowledgePipeline()
 r = p.search('$QUERY', limit=8, mode='$MODE')
@@ -33,7 +45,7 @@ for i, h in enumerate(r['results'], 1):
 "
     ;;
   stats)
-    $VENV -c "
+    $PYTHON -c "
 from src.database import KnowledgeDB
 from src.config import DB_PATH
 db = KnowledgeDB(DB_PATH); db.init()
@@ -48,7 +60,7 @@ for c in s['by_category']:
     ;;
   index)
     echo "生成向量索引..."
-    $VENV -c "
+    $PYTHON -c "
 from src.pipeline import KnowledgePipeline
 p = KnowledgePipeline()
 r = p.index_embeddings()
@@ -63,7 +75,7 @@ print(f'✅ {r[\"total\"]} 篇已索引 ({r.get(\"dim\",\"?\")}维)')
       elif [ "$arg" != "ingest" ]; then ARGS+=("$arg"); fi
     done
     CONTENT="${ARGS[*]}"
-    $VENV -c "
+    $PYTHON -c "
 from src.pipeline import KnowledgePipeline
 p = KnowledgePipeline(dry_run=$WRITE)
 r = p.ingest('''$CONTENT''')
@@ -76,7 +88,7 @@ else: print(f'✅ [{r[\"category\"]}] {r[\"title\"]}\n   {r[\"path\"]}')
   graph)
     TITLE="${2:-}"
     if [ -z "$TITLE" ]; then
-      $VENV -c "
+      $PYTHON -c "
 from src.pipeline import KnowledgePipeline
 p = KnowledgePipeline()
 gs = p.graph_stats()
@@ -86,7 +98,7 @@ for n in gs['most_connected'][:8]:
     print(f'  [{n[\"category\"]:12s}] {n[\"title\"]:25s} {n[\"degree\"]}条')
 "
     else
-      $VENV -c "
+      $PYTHON -c "
 from src.pipeline import KnowledgePipeline
 p = KnowledgePipeline()
 g = p.query_graph('$TITLE')
