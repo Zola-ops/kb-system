@@ -35,14 +35,13 @@
 
 ### 适用场景速查
 
-| 你是谁 | 推荐 |
-|--------|------|
-| 用 Hermes，只需要记录对话 | 复制 `skills/dialogue-ingest.md` 到 `~/.hermes/skills/`，说"记录"即触发 |
-| 用 Codex / Claude Code / Cursor | 复制 `skills/dialogue-ingest.md` 到对应技能目录 |
-| 用任意 Agent，需要搜索+图谱 | kb-system + MCP 一行 JSON |
+| 你需要什么 | 用什么 |
+|-----------|--------|
+| 只想记录对话 | 复制 [`skills/dialogue-ingest.md`](skills/dialogue-ingest.md) 到 Agent 技能目录 |
+| 还要搜索 + 知识图谱 + Web 界面 | kb-system（pip install + 配 API Key + 启动） |
 | 不用 Obsidian | 设 `NOTES_ROOT`，两个方案都支持 |
 
-> dialogue-ingest Skill 是一份纯 Markdown 文档，不绑定任何平台。复制到你的 Agent 技能目录即可使用。
+> Skill 是纯 Markdown 文档，不绑定平台。kb-system 通过 MCP 通用协议对接。
 
 ### 🔍 为什么 kb-system 用外部模型总结？
 
