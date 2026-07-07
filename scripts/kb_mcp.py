@@ -49,6 +49,17 @@ TOOLS = [
             }
         }
     },
+    {
+        "name": "kb_ingest",
+        "description": "摄入对话内容——生成结构化笔记并写入笔记文件夹",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "content": {"type": "string", "description": "要沉淀的对话内容"},
+                "write": {"type": "boolean", "description": "是否实际写入（false=仅预览）"}
+            }
+        }
+    },
 ]
 
 
@@ -103,6 +114,16 @@ def _call_tool(rid, name, args):
         else:
             gs = _pipeline.graph_stats()
             text = f"{gs['total_notes']} 节点, {gs['total_relations']} 边"
+        return _ok(rid, {"content": [{"type": "text", "text": text}]})
+
+    elif name == "kb_ingest":
+        content = args.get("content", "")
+        write = args.get("write", False)
+        r = _pipeline.ingest(content) if not write else _pipeline.ingest(content)
+        if r["action"] == "skip":
+            text = f"跳过: {r.get('reason', '')}"
+        else:
+            text = f"[{r.get('category','')}] {r.get('title','')}\n{r.get('note_content','')[:500]}"
         return _ok(rid, {"content": [{"type": "text", "text": text}]})
 
     return _err(rid, -32601, f"Unknown tool: {name}")

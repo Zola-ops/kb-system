@@ -87,14 +87,14 @@ uvicorn src.api:app --port 8765
 
 不绑定任何特定平台。四种方式接入：
 
-| 方式 | 适用场景 |
-|------|---------|
-| **MCP Server** | Claude Desktop / Cursor / Continue / Hermes 等，一行 JSON 配置 |
-| **REST API** | 任何能发 HTTP 的工具 |
-| **CLI** `scripts/kb` | 终端直接操作，自动检测 Python 环境 |
-| **Python SDK** | `from src.pipeline import KnowledgePipeline` |
+| 方式 | 适用场景 | 支持的 Agent |
+|------|---------|------------|
+| **MCP Server** ← 推荐 | 通用标准协议 | Claude Desktop, Codex, Cursor, Continue, Copilot, Hermes… |
+| **REST API** | 任何能发 HTTP 的工具 | 所有 |
+| **CLI** `scripts/kb` | 终端直接操作 | 所有 |
+| **Python SDK** | 代码调用 | 所有 |
 
-### MCP 配置
+### MCP 配置（一行 JSON，通用接入）
 
 ```json
 {
@@ -108,11 +108,21 @@ uvicorn src.api:app --port 8765
 }
 ```
 
-配置后 Agent 获得 `kb_search` / `kb_stats` / `kb_graph` 三个工具。
+配置后 Agent 获得 4 个工具：`kb_search` / `kb_ingest` / `kb_graph` / `kb_stats`
 
 ### Hermes 用户
 
-额外提供 `knowledge-agent` skill：对话中直接问"我之前的结论是什么"，Agent 自动检索知识库回答。支持 cron 定时自动摄入。
+额外提供 `kb-ingest` skill（零配置，Hermes 自己总结对话写入笔记）和 `knowledge-agent` skill（对话式检索 + cron 自动摄入）。其他 Agent 工具通过 MCP 获得同等能力。
+
+## 不使用 Obsidian？
+
+设置环境变量指向任意 Markdown 文件夹：
+
+```bash
+NOTES_ROOT=~/my-notes uvicorn src.api:app --port 8765
+```
+
+wikilink `[[链接]]` 和 frontmatter 是通用 Markdown 语法，不限于 Obsidian。
 
 ## 与 Obsidian 的关系
 
