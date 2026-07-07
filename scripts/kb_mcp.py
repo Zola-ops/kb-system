@@ -119,11 +119,19 @@ def _call_tool(rid, name, args):
     elif name == "kb_ingest":
         content = args.get("content", "")
         write = args.get("write", False)
-        r = _pipeline.ingest(content) if not write else _pipeline.ingest(content)
+        # 仅预览时不写入
+        if not write:
+            from pipeline import KnowledgePipeline as KP
+            p = KP(dry_run=True)
+            r = p.ingest(content)
+        else:
+            r = _pipeline.ingest(content)
         if r["action"] == "skip":
             text = f"跳过: {r.get('reason', '')}"
+        elif r["action"] == "dry_run":
+            text = f"[预览] [{r.get('category','')}] {r.get('title','')}\n{r.get('summary','')}"
         else:
-            text = f"[{r.get('category','')}] {r.get('title','')}\n{r.get('note_content','')[:500]}"
+            text = f"[已写入] [{r.get('category','')}] {r.get('title','')}\n{r.get('path','')}"
         return _ok(rid, {"content": [{"type": "text", "text": text}]})
 
     return _err(rid, -32601, f"Unknown tool: {name}")

@@ -21,7 +21,7 @@ class EmbeddingEngine:
 
     @property
     def dim(self) -> int:
-        return self.model.get_sentence_embedding_dimension()
+        return self.model.get_sentence_embedding_dimension()  # noqa
 
     def embed(self, text: str) -> np.ndarray:
         return self.model.encode(text, normalize_embeddings=True)

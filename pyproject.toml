@@ -1,7 +1,7 @@
 [project]
 name = "kb-system"
 version = "0.1.0"
-description = "个人知识库自动构建与关联检索系统"
+description = "个人知识图谱构建与管理Agent"
 requires-python = ">=3.11"
 dependencies = [
     "openai>=1.0",
