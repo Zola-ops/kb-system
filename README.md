@@ -16,26 +16,39 @@
 
 ### 🎯 两种用法
 
-| | kb-ingest (轻量) | kb-system (完整) |
+| | [dialogue-ingest](skills/dialogue-ingest.md) (轻量 Skill) | kb-system (完整管线) |
 |---|---|---|
-| 怎么做 | 一个 skill，说"记录"就行 | 启动服务，Web + CLI + Agent |
-| 摄入方式 | Hermes 自己总结 | 外部 LLM 总结 |
-| 配置 | **零**，开箱即用 | 需配 LLM API Key |
-| 语义搜索 | ❌ | ✅ |
-| 知识图谱 | ❌ | ✅ |
-| Web 界面 | ❌ | ✅ |
-| 定时自动 | ❌ | ✅ Cron |
-| 跨平台 | ❌ | ✅ MCP |
+| 本质 | 一份 Markdown 文档，复制即用 | 本地服务 + Python 管线 |
+| 摄入笔记 | ✅ Agent 自己总结 | ✅ 外部 LLM 总结 |
+| 配置 | **零** | 需配 LLM API Key + pip install |
+| 适用 Agent | **任意**（能读写文件即可） | MCP 兼容（Claude/Codex/Cursor/Hermes…） |
+| 适用笔记工具 | **任意** Markdown 文件夹 | **任意** Markdown 文件夹 |
+| 语义搜索 | ❌ | ✅ 384维向量索引 |
+| 知识图谱 | ❌ | ✅ 自动关联 + D3 可视化 |
+| Web 界面 | ❌ | ✅ localhost:8765 |
+| 定时自动 | ❌ | ✅ Cron 每 6 小时 |
+| 适合 | 随手记录，我用故我记 | 建知识大脑，搜索+发现 |
 
-> **随手记录 → kb-ingest。建知识大脑 → kb-system。**
+> **只想要一个"记录对话"的 Skill？复制 `skills/dialogue-ingest.md` 到你的 Agent 技能目录，说完"记录"就完成。零依赖。**
+>
+> **想要搜索引擎 + 知识图谱 + 可视化？用 kb-system。**
+
+### 适用场景速查
+
+| 你是谁 | 推荐 |
+|--------|------|
+| 用 Hermes，只需要记录对话 | `kb-ingest` skill（已在 Hermes 内置） |
+| 用 Codex / Claude Code / Cursor | 复制 `skills/dialogue-ingest.md` 到技能目录 |
+| 用任意 Agent，需要搜索+图谱 | kb-system + MCP 配置 |
+| 不用 Obsidian | 设 `NOTES_ROOT`，两个方案都支持 |
 
 ### 🔍 为什么 kb-system 用外部模型总结？
 
-kb-ingest 由 Hermes 自己总结对话——简单，零配置，够用。
+dialogue-ingest Skill 由 Agent 自己总结对话——简单，零配置，够用。
 
-kb-system 作为完整知识管理系统，额外配置了外部 LLM 来完成摄入。原因：**同一模型总结自己的对话 = 瞎子摸象**——会选择性忽略错误、遗漏关键上下文。外部模型只看对话原文，不带立场，更客观完整。
+kb-system 额外配置了外部 LLM 来完成摄入。原因：**同一模型总结自己的对话 = 瞎子摸象**——会选择性忽略错误、遗漏关键上下文。外部模型只看对话原文，不带立场，更客观完整。
 
-这就像**让作者自己写书评 vs 让独立评论家写书评**——前者方便，后者可信。两种都合理，场景不同。
+**作者自评 vs 独立书评——前者方便，后者可信。两种都合理，场景不同。**
 
 ## 快速开始
 
