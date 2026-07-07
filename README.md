@@ -1,106 +1,83 @@
 # 📚 kb-system — 个人知识图谱构建与管理 Agent
 
-> AI 驱动的本地知识管理系统：对话自动沉淀 → 语义检索 → 知识图谱 → Web 界面。支持任意 MCP 兼容 Agent 工具对接。
+> 对话自动沉淀 · 语义检索 · 知识图谱 · 本地 Web 界面 · MCP 通用协议
 
-## 能力一览
+[![Python](https://img.shields.io/badge/python-3.11+-blue)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-17%20passed-brightgreen)](tests/)
 
-| 功能 | 说明 |
-|------|------|
-| 📝 **自动摄入** | 粘贴对话 → LLM 判断价值 → 生成结构化笔记 → 写入 Obsidian |
-| 🔍 **语义检索** | 自然语言搜索，不用精确关键词也能找到 |
-| 🕸️ **知识图谱** | 自动发现笔记间关联（wikilink + 语义 + 标签），D3 力导向图 |
-| 🖥️ **Web UI** | 本地网页界面，搜索/浏览/图谱/摄入/统计 |
+---
+
+## 是什么
+
+把你的对话和笔记变成**可搜索、可关联、可演化**的知识网络。
+
+你每天和 AI 对话产生的结论、踩坑、分析、决策——自动沉淀为结构化笔记，用自然语言就能检索，笔记之间自动发现关联形成知识图谱。
+
+```
+对话 → LLM 分类 → 结构化笔记 → 向量索引 → 知识图谱
+                          ↓
+                   Obsidian / 任意 Markdown 文件夹
+```
 
 ## 快速开始
 
-### 1. 安装
-
 ```bash
-git clone https://github.com/yourname/kb-system.git
-cd kb-system
+# 1. 安装
+git clone https://github.com/Zola-ops/kb-system.git && cd kb-system
 pip install -e ".[dev]"
-```
 
-### 2. 配置
-
-```bash
+# 2. 配置 LLM
 cp .env.example .env
-# 编辑 .env，填入你的 LLM API 地址和 Key
-```
+# 编辑 .env，填入 OpenAI 兼容的 API 地址和 Key
 
-### 3. 启动
-
-```bash
-python -m uvicorn src.api:app --port 8765
+# 3. 启动
+uvicorn src.api:app --port 8765
 # 浏览器打开 http://localhost:8765
 ```
 
-### 4. 索引你的 Obsidian Vault
+首次启动自动扫描笔记文件夹、生成语义索引、构建知识图谱。**零手动配置。**
 
-首次使用需要索引笔记：
+## 做什么
 
-```bash
-python -c "from src.pipeline import KnowledgePipeline; p = KnowledgePipeline(); p.index_embeddings()"
-```
-
-## CLI 工具
-
-```bash
-scripts/kb search "关键词"         # 关键词搜索
-scripts/kb search -s "语义描述"    # 语义搜索
-scripts/kb graph                   # 图谱统计
-scripts/kb ingest --write "内容"   # 摄入对话并写入 Obsidian
-```
+| 能力 | 说明 |
+|------|------|
+| 📝 **自动摄入** | 对话 → LLM 判断价值 → 生成结构化笔记 → 写入文件夹 |
+| 🔍 **语义检索** | "我之前的 GSB 分析结论是什么"——自然语言搜，不用关键词 |
+| 🕸️ **知识图谱** | 自动发现 wikilink / 标签 / 语义关联，D3.js 力导向图可视化 |
+| 🖥️ **Web 界面** | 搜索、浏览、图谱、摄入、统计——简约白色主题 |
+| ⏰ **定时任务** | Cron 每 6 小时扫描最近对话，自动沉淀有价值内容 |
 
 ## 架构
 
 ```
-摄入层: 对话 → LLM (OpenAI 兼容) → 分类 → 结构化笔记 → Obsidian MD
-存储层: Obsidian Vault + SQLite + 向量嵌入 (384维)
-检索层: 关键词 LIKE + 语义余弦相似度 + 知识图谱三元组
-呈现层: FastAPI + 单页 HTML (简约白色主题)
+┌─────────────────────────────────────────┐
+│                摄入层                     │
+│  对话 → LLM 分类 → 结构化笔记生成         │
+├─────────────────────────────────────────┤
+│                存储层                     │
+│  Markdown 文件 + SQLite 索引 + 384维向量   │
+├─────────────────────────────────────────┤
+│                检索层                     │
+│  关键词 LIKE + 语义余弦 + 知识图谱三元组    │
+├─────────────────────────────────────────┤
+│                接口层                     │
+│  Web UI · CLI · MCP Server · Python SDK  │
+└─────────────────────────────────────────┘
 ```
 
-## 依赖
+## 对接 Agent 工具
 
-- Python 3.11+
-- LLM API (任何 OpenAI 兼容接口，如 DeepSeek/OpenAI/OneAPI)
-- sentence-transformers (首次启动自动下载多语言嵌入模型 ~118MB)
+不绑定任何特定平台。四种方式接入：
 
-## 与 Obsidian 的关系
+| 方式 | 适用场景 |
+|------|---------|
+| **MCP Server** | Claude Desktop / Cursor / Continue / Hermes 等，一行 JSON 配置 |
+| **REST API** | 任何能发 HTTP 的工具 |
+| **CLI** `scripts/kb` | 终端直接操作，自动检测 Python 环境 |
+| **Python SDK** | `from src.pipeline import KnowledgePipeline` |
 
-**kb-system 不依赖 Obsidian，但对 Obsidian 用户开箱即用。**
-
-启动时自动扫描你的 Vault：
-- 📂 发现所有 `.md` 文件
-- 🏷️ 解析 frontmatter（YAML 元数据）
-- 🔗 提取 `[[wikilink]]` 双向链接
-- #️⃣ 提取 `#标签`
-- 🧠 生成语义向量索引
-- 🕸️ 构建知识图谱
-
-**零配置：** 指向任意 Markdown 文件夹，以上全部自动完成。
-
-| Obsidian 用户 | 非 Obsidian 用户 |
-|---|---|
-| 默认路径 `~/Documents/Obsidian Vault`，启动即用 | 设 `NOTES_ROOT=/your/folder`，同样支持 |
-
-如果你用 Obsidian 编辑、用 kb-system 管理搜索和图谱——两者互补，互不干扰。
-
-## Agent 工具适配
-
-kb-system 核心是标准 Python 管线 + FastAPI，**不绑定任何特定 Agent**。
-
-### 对接方式
-
-| 方式 | 说明 |
-|------|------|
-| **MCP Server** | 标准协议，Claude Desktop / Cursor / Continue / Hermes 等均可使用 |
-| **REST API** | `localhost:8765/api/*`，任何 HTTP 客户端可调用 |
-| **CLI** | `scripts/kb`，自动检测 Python 环境，独立运行 |
-| **Python SDK** | `from src.pipeline import KnowledgePipeline`，直接代码调用 |
-
-### MCP 配置示例
+### MCP 配置
 
 ```json
 {
@@ -114,16 +91,65 @@ kb-system 核心是标准 Python 管线 + FastAPI，**不绑定任何特定 Agen
 }
 ```
 
-配置后 Agent 获得 3 个工具：`kb_search` / `kb_stats` / `kb_graph`
+配置后 Agent 获得 `kb_search` / `kb_stats` / `kb_graph` 三个工具。
 
 ### Hermes 用户
 
-额外提供 `knowledge-agent` skill，对话式交互 + cron 自动摄入。
+额外提供 `knowledge-agent` skill：对话中直接问"我之前的结论是什么"，Agent 自动检索知识库回答。支持 cron 定时自动摄入。
 
-## 测试
+## 与 Obsidian 的关系
+
+**不依赖 Obsidian，只是恰好兼容。**
+
+启动时自动扫描笔记文件夹，提取：
+- 📂 `.md` 文件 → 🏷️ frontmatter 元数据 → 🔗 `[[wikilink]]` 双向链接 → #️⃣ 标签
+
+| Obsidian 用户 | 其他 Markdown 用户 |
+|---|---|
+| 默认路径 `~/Documents/Obsidian Vault`，开箱即用 | 设 `NOTES_ROOT=/your/folder`，同样支持 |
+
+用 Obsidian 编辑笔记，用 kb-system 搜索、发现关联、看知识图谱——互补，互不干扰。
+
+## CLI
 
 ```bash
-pytest tests/ -q
+scripts/kb search "关键词"           # 关键词搜索
+scripts/kb search -s "语义描述"      # 语义搜索
+scripts/kb graph                     # 图谱概览
+scripts/kb graph "笔记标题"          # 查看某篇笔记的关联
+scripts/kb ingest "对话内容"         # 干跑预览
+scripts/kb ingest --write "内容"     # 写入文件夹
+scripts/kb stats                     # 知识库统计
+scripts/kb index                     # 重建向量索引
+```
+
+## 依赖
+
+- Python 3.11+
+- LLM API（OpenAI 兼容接口：DeepSeek / OpenAI / OneAPI 等）
+- sentence-transformers（首次启动自动下载 `paraphrase-multilingual-MiniLM-L12-v2`，~118MB）
+
+## 开发
+
+```bash
+# 测试
+pytest tests/ -q        # 17 passed
+
+# 项目结构
+src/
+├── pipeline.py         # 端到端管线 + 图谱构建
+├── ingest.py           # LLM 分类器 + 笔记生成
+├── database.py         # SQLite 索引 + 向量存储
+├── embeddings.py       # 多语言语义嵌入引擎
+├── vault_reader.py     # Markdown 文件夹解析
+├── vault_writer.py     # 笔记写入
+├── config.py           # 配置（自动加载 .env）
+└── api.py              # FastAPI Web 接口
+static/index.html       # Web UI（单页，无框架）
+scripts/
+├── kb                  # CLI 工具
+└── kb_mcp.py           # MCP Server
+tests/                  # 17 个测试
 ```
 
 ## License
